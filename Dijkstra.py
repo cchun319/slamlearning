@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-from i_planner import PlannerInterface, PlannerType
+from i_planner import PlannerInterface, PlannerType, PlanStatus
 from queue import PriorityQueue
 from grid_status import GridState
+from board import MapInfo
 
 class DIJKSTRA(PlannerInterface):
     def __init__(self):
@@ -31,6 +32,8 @@ class DIJKSTRA(PlannerInterface):
             current_grid.set_state(GridState.VISITED)
             neighbors = self.get_neighbors(current_grid)
             for nei in neighbors:
+                # nei might be already in the q, fastest way to update the g()?
+                
                 if nei.state() == GridState.UNVISITED:
                     nei.set_q(min(nei.g(), current_grid.g() + 1))
                     if nei.g() == current_grid.g() + 1:
@@ -38,7 +41,12 @@ class DIJKSTRA(PlannerInterface):
                     self._priority_queue.put(nei)
         
         # Done, get the path if reach dst
+        status = PlanStatus(current_grid == dst)
+        while current_grid != src:
+            status.add_node(current_grid)
+            current_grid = current_grid.pred()
         
-            
+        return status
+
         
         
