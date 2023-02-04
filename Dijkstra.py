@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 from i_planner import PlannerInterface, PlannerType, PlanStatus
-from queue import PriorityQueue
 from grid_status import GridState
-from board import MapInfo
 
-class DIJKSTRA(PlannerInterface):
+class Dijkstra(PlannerInterface):
     def __init__(self):
         super().__init__()
     
-    def plan(self):
+    def plan(self, grid_map):
         '''
         pseudo
             set g() of src to 0
@@ -25,23 +23,26 @@ class DIJKSTRA(PlannerInterface):
                                    |
                                    P(g=2)
         '''
-        
+        super().plan(grid_map)
+        src = self._map_info.src()
         src.set_g(0)
-        while not self._priority_queue.empty() and current_grid != dst:
+        self._priority_queue.put(src)
+        current_grid = None
+        while not (self._priority_queue.empty() or self._map_info.is_dest(current_grid)):
             current_grid = self._priority_queue.get()
-            current_grid.set_state(GridState.VISITED)
+            # update the grid
+            grid_map.set_grid_state(current_grid, GridState.VISITED)
+            # TODO: update the grid in the map
             neighbors = self.get_neighbors(current_grid)
             for nei in neighbors:
                 # nei might be already in the q, fastest way to update the g()?
-                
-                if nei.state() == GridState.UNVISITED:
-                    nei.set_q(min(nei.g(), current_grid.g() + 1))
-                    if nei.g() == current_grid.g() + 1:
-                        nei.set_pred(current_grid)
-                    self._priority_queue.put(nei)
+                if grid_map.get_grid_state(nei) != GridState.VISITED: # check if the grid is already visited in the map
+                    neighbor = grid_map.get_grid(nei[0], nei[1])
+                    neighbor.relax(current_grid)
+                    self._priority_queue.put(neighbor)
         
         # Done, get the path if reach dst
-        status = PlanStatus(current_grid == dst)
+        status = PlanStatus(self._map_info.is_dest(current_grid))
         while current_grid != src:
             status.add_node(current_grid)
             current_grid = current_grid.pred()

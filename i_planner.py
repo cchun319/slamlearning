@@ -19,16 +19,19 @@ class PlanStatus:
         self._path.insert(0, node)
 
 class PlannerInterface:
-    def __init__(self, map_info): 
+    steps = [[1,0], [0,1], [-1,0], [0,-1]]
+    def __init__(self): 
         self._priority_queue = PriorityQueue()
-        self._map_info = map_info
-        pass
 
-    def plan(self):
-        pass
+    def plan(self, grid_map):
+        self._map_info = grid_map._map_info
 
-    def get_neighbors(self):
-        pass
-
-    def relax(self):
-        pass
+    def get_neighbors(self, grid):
+        ret = []
+        for step in PlannerInterface.steps:
+            r = grid.id()[0] + step[0]
+            c = grid.id()[1] + step[1]
+            if(self._map_info.is_valid_index(r, c)):
+                ret.append([r, c])
+            
+        return ret

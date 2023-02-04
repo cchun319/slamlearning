@@ -21,7 +21,7 @@ class TestGridStatus(unittest.TestCase):
         cls._g2.set_g(50)
         cls.assertGreater(cls._g1, cls._g2)
 
-class TestPQ(unittest.TestCase):
+class TestPriorityQueue(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._pq = PriorityQueue()
@@ -36,13 +36,14 @@ class TestPQ(unittest.TestCase):
         cls._pq.get(False)
     
     def test_pq2(cls):
+        cls.assertEqual(cls._pq.qsize(), 0)
         _g1 = Grid(0, 0, 100)
         _g2 = Grid(0, 0, 50)
         cls._pq.put(_g2)
         cls._pq.put(_g1)
 
         cls.assertEqual(_g2, cls._pq.get())
-        
+        cls.assertEqual(_g1, cls._pq.get())        
 
 if __name__ == '__main__':
     unittest.main()
