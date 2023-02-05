@@ -3,18 +3,27 @@
 from enum import Enum
 from functools import total_ordering
 import math
+from PyQt5.QtWidgets import QTableWidgetItem
+from PyQt5.QtCore import Qt
 
 class GridState(Enum):
-    UNVISITED = 1
-    VISITED = 2
-    SEEN = 3
-    OCCUPIED = 4
-    SRC = 5
-    DEST = 6
+    UNVISITED = 1 # white
+    VISITED = 2 # 
+    SEEN = 3 # 
+    OCCUPIED = 4 # obstacle black
+    SRC = 5 # green
+    DEST = 6 # red
 
 @total_ordering
-class Grid:
+class Grid(QTableWidgetItem):
+    GridColorMap = {GridState.SRC: Qt.green,
+                    GridState.DEST: Qt.red,
+                    GridState.UNVISITED: Qt.white,
+                    GridState.VISITED: Qt.gray,
+                    GridState.SEEN: Qt.yellow,
+                    GridState.OCCUPIED: Qt.black}
     def __init__(self, row, col, cost = math.inf):
+        super().__init__()
         self._row = row
         self._col = col
         self._state = GridState.UNVISITED
@@ -53,6 +62,7 @@ class Grid:
 
     def set_state(self, state):
         self._state = state
-    
+        self.setBackground(Grid.GridColorMap[self._state])
+
     def state(self):
         return self._state

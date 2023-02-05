@@ -43,9 +43,10 @@ class GridMap:
         # can any state change arbitrarily?
         self._board[row][col].set_state(state)
         self._map_info.update_info(self._board[row][col])
+        return True
 
     def set_grid_state(self, grid, state):
-        self.set_grid_index_state(grid.id()[0], grid.id()[1], state)
+        return self.set_grid_index_state(grid.id()[0], grid.id()[1], state)
         
     def get_grid_state(self, grid):
         return self.get_grid(grid[0], grid[1]).state()
