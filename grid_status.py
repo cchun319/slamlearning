@@ -13,6 +13,7 @@ class GridState(Enum):
     OCCUPIED = 4 # obstacle black
     SRC = 5 # green
     DEST = 6 # red
+    PATH = 7
 
 @total_ordering
 class Grid(QTableWidgetItem):
@@ -21,7 +22,8 @@ class Grid(QTableWidgetItem):
                     GridState.UNVISITED: Qt.white,
                     GridState.VISITED: Qt.gray,
                     GridState.SEEN: Qt.yellow,
-                    GridState.OCCUPIED: Qt.black}
+                    GridState.OCCUPIED: Qt.black,
+                    GridState.PATH: Qt.blue}
     def __init__(self, row, col, cost = math.inf):
         super().__init__()
         self._row = row
@@ -66,3 +68,6 @@ class Grid(QTableWidgetItem):
 
     def state(self):
         return self._state
+    
+    def reset(self):
+        self.__init__(self._row, self._col)

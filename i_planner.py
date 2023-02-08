@@ -15,8 +15,14 @@ class PlanStatus:
         self._path = []
         self._plan_succeed = succeed
     
+    def success(self):
+        return self._plan_succeed
+    
     def add_node(self, node):
         self._path.insert(0, node)
+    
+    def path(self):
+        return self._path
 
 class PlannerInterface:
     steps = [[1,0], [0,1], [-1,0], [0,-1]]

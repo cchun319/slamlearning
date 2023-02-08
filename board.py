@@ -31,6 +31,9 @@ class MapInfo:
             self._src = grid
         elif grid.state() == GridState.DEST:
             self._dest = grid
+    
+    def reset(self):
+        self._src = self._dest = None
 
 class GridMap:
     def __init__(self, num_of_row, num_of_col) -> None:
@@ -56,3 +59,9 @@ class GridMap:
             return None
         
         return self._board[row][col]
+    
+    def reset(self):
+        self._map_info.reset()
+        for i in range(len(self._board)):
+            for j in range(len(self._board[0])):
+                self._board[i][j].reset()

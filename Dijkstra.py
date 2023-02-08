@@ -7,7 +7,7 @@ class Dijkstra(PlannerInterface):
     def __init__(self):
         super().__init__()
     
-    def plan(self, grid_map, grid_queue, lock):
+    def plan(self, grid_map, grid_queue, communicate):
         '''
         pseudo
             set g() of src to 0
@@ -26,19 +26,18 @@ class Dijkstra(PlannerInterface):
         '''
         super().plan(grid_map)
         # need to make sure src and dest are assigned
-        grid_queue.put(self._map_info.src(), False)
-        grid_queue.put(self._map_info.dest(), False)
+        self._communicate = communicate
+        grid_queue.put(self._map_info.src())
+        grid_queue.put(self._map_info.dest())
         src = self._map_info.src()
         src.set_g(0)
         self._priority_queue.put(src)
         current_grid = None
         while not (self._priority_queue.empty() or self._map_info.is_dest(current_grid)):
-            # lock.acquire()
-            print("planner acquuired")
             current_grid = self._priority_queue.get()
             # update the grid
             grid_map.set_grid_state(current_grid, GridState.VISITED)
-            grid_queue.put(current_grid, False)
+            grid_queue.put(current_grid)
             # TODO: update the grid in the map
             neighbors = self.get_neighbors(current_grid)
             for nei in neighbors:
@@ -48,15 +47,15 @@ class Dijkstra(PlannerInterface):
                     neighbor.relax(current_grid)
                     neighbor.set_state(GridState.SEEN)
                     self._priority_queue.put(neighbor)
-                    grid_queue.put(neighbor, False)
-            # release lock
-            # lock.release()
-            # sleep(1 / 10.0)
-            # print("planner releasued")
-        
+                    grid_queue.put(neighbor)
+
+            self._communicate.sig.emit(10)
+            input()
+
         # Done, get the path if reach dst
         status = PlanStatus(self._map_info.is_dest(current_grid))
         while current_grid != src:
+            current_grid.set_state(GridState.PATH)
             status.add_node(current_grid)
             current_grid = current_grid.pred()
         
