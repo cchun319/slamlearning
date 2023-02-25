@@ -48,7 +48,7 @@ class Grid(QTableWidgetItem):
         self._g = g
 
     def h(self):
-        pass
+        return 0
 
     def pred(self):
         return self._pred
@@ -56,11 +56,11 @@ class Grid(QTableWidgetItem):
     def set_pred(self, pred):
         self._pred = pred
 
-    def relax(self, potentail_pred):
+    def relax(self, potential_pred):
         # set pred if relaxed
-        self.set_g(min(self.g(), potentail_pred.g() + 1)) # this has to abstract, g + h
-        if self.g() == potentail_pred.g() + 1:
-            self.set_pred(potentail_pred)
+        self.set_g(min(self.g(), potential_pred.g() + 1)) # TODO: this has to abstract, g + h
+        if self.g() == potential_pred.g() + 1:
+            self.set_pred(potential_pred)
 
     def set_state(self, state):
         self._state = state

@@ -3,7 +3,7 @@ import sys
 
 # 1. Import QApplication and all the required widgets
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QObject, pyqtSignal, QObject
+from PyQt5.QtCore import QObject, pyqtSignal, QObject, QThread
 from board import GridMap
 from functools import partial
 from grid_status import GridState
@@ -17,14 +17,10 @@ class AppMode(Enum):
     SELECT_SRC = 1
     SELECT_DEST = 2
 
-class Communicate(QObject):
-    sig = pyqtSignal(int)
-
 class MazeApp(QMainWindow):
+    term = pyqtSignal() 
     def __init__(self):
         super().__init__(parent=None)
-        self.communicate = Communicate()
-        self.communicate.sig[int].connect(self._set_grid_item)
         self.setWindowTitle("Planner")
         self._mode = AppMode.STANDBY
         table = QTableWidget(20, 20, self)
@@ -36,7 +32,8 @@ class MazeApp(QMainWindow):
         self.setCentralWidget(table)
         self._createStatusBar()
         self._grid_queue = queue.Queue()
-    
+        self._thread = QThread()
+
     def _set_mode(self, mode):
         self._mode = mode
 
@@ -46,7 +43,6 @@ class MazeApp(QMainWindow):
             while current_qsize > 0:
                 _item = self._grid_queue.get(True)
                 current_qsize -= 1
-                o_item = self.centralWidget().itemAt(_item.id()[0], _item.id()[1])
                 # TODO: clean way to update the logic
                 self.centralWidget().takeItem(_item.id()[0], _item.id()[1])
                 self.centralWidget().setItem(_item.id()[0], _item.id()[1], _item)
@@ -62,27 +58,30 @@ class MazeApp(QMainWindow):
         elif self._mode == AppMode.SELECT_DEST:
             self._grid_map.set_grid_index_state(r, c, GridState.DEST)
             self._grid_queue.put(self._grid_map.get_grid(r, c))
-        self.communicate.sig.emit(0)
-
+        self._set_grid_item()
         self._mode = AppMode.STANDBY
     
     def _plan(self):
         ### TODO: might need to put this in another thread, read the algo. chosen
-        print("plan started!")
-        planner = Dijkstra()
-        plan_status = planner.plan(self._grid_map, self._grid_queue, self.communicate)
-        if plan_status.success():
-            for node in plan_status.path():
-                self._grid_queue.put(node)
-        self.communicate.sig.emit(0)
-        print("plan Done!")
-    
+        self._planner = Dijkstra(self._grid_map, self._grid_queue)
+        self._planner.moveToThread(self._thread)
+        self._thread.started.connect(self._planner.plan)
+        self._planner.finished.connect(self._thread.quit)
+        self._planner.finished.connect(self._planner.deleteLater)
+        self.term.connect(self._planner.terminate)
+        self._planner.progress.connect(self._set_grid_item)
+
+        self._thread.start()
+        print("plan done")
+
     def _close(self):
         self.close()
     
     def _reset(self):
-        ###
+        self._planner.terminate()
         self._grid_map.reset()
+        while not self._grid_queue.empty(): 
+            self._grid_queue.get(False)
         for i in range(self._grid_map._map_info._r):
             for j in range(self._grid_map._map_info._c):
                 self.centralWidget().takeItem(i, j)
