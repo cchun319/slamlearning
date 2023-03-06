@@ -49,7 +49,7 @@ class Dijkstra(PlannerInterface):
                 # nei might be already in the q, fastest way to update the g()?
                 if self._grid_map.get_grid_state(nei) != GridState.VISITED: # check if the grid is already visited in the map
                     neighbor = self._grid_map.get_grid(nei[0], nei[1])
-                    neighbor.relax(current_grid)
+                    neighbor.relax(current_grid, self._map_info.dest())
                     neighbor.set_state(GridState.SEEN)
                     self._priority_queue.put(neighbor)
                     self._grid_queue.put(neighbor)

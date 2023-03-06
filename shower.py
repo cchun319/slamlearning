@@ -60,6 +60,9 @@ class MazeApp(QMainWindow):
             self._grid_queue.put(self._grid_map.get_grid(r, c))
         self._set_grid_item()
         self._mode = AppMode.STANDBY
+
+    def _make_maze(self):
+        pass
     
     def _plan(self):
         ### TODO: might need to put this in another thread, read the algo. chosen
