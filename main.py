@@ -12,7 +12,7 @@ import sys
 # import queue
 # from time import time, sleep
 from threading import Thread
-from ui.new_board import board
+from ui.board_pysimplegui import Board
 
 # class AppMode(Enum):
 #     STANDBY = 0
@@ -122,7 +122,7 @@ def main():
     # window.show()
     # sys.exit(app.exec())
     # thread pool [1.ui, 2.planner]
-    b_ = board(15, 22)
+    b_ = Board(15, 22)
     b_.run()
 
 

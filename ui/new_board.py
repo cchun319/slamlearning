@@ -4,8 +4,44 @@ import numpy as np
 from enum import Enum
 import queue
 from threading import Thread, Event
+# from Dijk import Dijkstra
+
 # from algorithm.planer_manager import PlanerManager
 ### great reference: https://k3no.medium.com/build-a-maze-with-python-920ac2266fe7
+# TODO: consolidate the naming style for class static variable, member variable
+# class member function, internal function
+
+class PlanMethod(Enum):
+    DIJK = 'DIJK'
+    A_STAR = 'A_STAR'
+
+
+class PlanerManager():
+    @staticmethod
+    def planner(method):
+        plan_method = PlanMethod(method)
+        if plan_method == PlanMethod.DIJK:
+            return Dijkstra()
+        elif plan_method == PlanMethod.A_STAR:
+            return None
+
+
+    @staticmethod
+    def plan(method, event, plan_meta, update_queue):
+        '''
+        event: flag to inform the planing is done, means reaching the destination
+        plan_meta: has source and destnation grids
+        update_queue: thread safe queue which lets UI thread know when to update the grid 
+        '''
+        planner = PlanerManager.planner(method)
+        success, path = planner.plan(plan_meta, update_queue)
+        while success:
+            moveToDest(path)
+        # plan function shall keep updating the grid status
+        # toggle on/off occupied grids could happen during plan/move
+            
+        event.set()
+        # event should be set only when reaching the dest/ dead end
 
 class PlanMeta():
     def __init__(self) -> None:
@@ -24,7 +60,6 @@ class PlanMeta():
         else:
             print("warning")
         return ret
-
         
 
 class GridState(Enum):
@@ -42,69 +77,6 @@ class UiState(Enum):
     TOGGLE_OBSTABLE = 'TOGGLE'
     STANDBY = 'STANDBY'
     PLAN = 'PLAN'
-
-class cell():
-    _hand_length = 0
-    _diameter = 0
-    _hand_width = 5
-    _GridColorMap = {GridState.SRC: 'green',
-                    GridState.DEST: 'red',
-                    GridState.UNVISITED: 'white',
-                    GridState.VISITED: 'gray',
-                    GridState.SEEN: 'yellow',
-                    GridState.OCCUPIED: 'black',
-                    GridState.PATH: 'blue'}
-    _offset = [1, 0, -1, 0]
-    def __init__(self, x, y, r, c, state = GridState.UNVISITED) -> None:
-        self._x = x
-        self._y = y
-        self._r = r
-        self._c = c
-        self._state = state
-
-    @property
-    def state(self):
-        return self._state
-    
-    @state.setter
-    def state(self, state):
-        self._state = state 
-
-    @property
-    def x(self):
-        return self._x
-    
-    @x.setter
-    def x(self, x):
-        self._x = x
-
-    @property
-    def y(self):
-        return self._y
-    
-    @y.setter
-    def y(self, y):
-        self._y = y
-    
-    @staticmethod
-    def direction():
-        return [[0,  cell._diameter, 0,  cell._hand_length + cell._diameter],
-                   [0, -cell._diameter, 0, -cell._hand_length - cell._diameter],
-                   [cell._diameter, 0, cell._diameter + cell._hand_length, 0],
-                   [-cell._diameter, 0, -cell._diameter -cell._hand_length, 0]]
-    
-    def __str__(self):
-        return f"POS: ({self._x},{self._y}), STATE: {self._state}"
-    
-    def get_neighbor(self):
-        # TODO: neighbor and direction should be hooked
-        neighbors = []
-        cid = 1
-        for i in range(len(cell._offset)):
-           neighbors.append((self._r + cell._offset[i], self._c + cell._offset[cid % len(cell._offset)])) 
-           cid += 1
-        return neighbors
-    
 
 class board():
     def __init__(self, num_of_row, num_of_col, l = 20, d = 12) -> None:

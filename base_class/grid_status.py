@@ -141,3 +141,4 @@ class GridLFA(QTableWidgetItem):
     def reset(self):
         self.__init__(self._row, self._col)
 
+
