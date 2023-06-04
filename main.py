@@ -122,9 +122,13 @@ def main():
     # window.show()
     # sys.exit(app.exec())
     # thread pool [1.ui, 2.planner]
-    b_ = Board(15, 22)
-    b_.run()
+    ui_t = Thread(name='UI', target=ui_entry)
+    ui_t.start()
+    ui_t.join()
 
+def ui_entry():
+    b_ = Board(15, 10)
+    b_.run()
 
 if __name__ == '__main__':
     main()
