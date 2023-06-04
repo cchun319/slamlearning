@@ -60,10 +60,11 @@ class Dijkstra():
         src.g = 0
         self._priority_queue.put(src)
         current_grid = None
-        while not (self._priority_queue.empty() or (current_grid is not None and self._plan_meta.dest == current_grid)):
+        while not self._priority_queue.empty():
             current_grid = self._priority_queue.get()
-            if self._grid[current_grid.r][current_grid.c].state == GridState.VISITED:
-                continue
+            if self._plan_meta.dest.pose == current_grid.pose:
+                break
+
             # update current grid
             self._grid[current_grid.r][current_grid.c].state = GridState.VISITED
             self._update_queue.put(current_grid)
@@ -72,20 +73,21 @@ class Dijkstra():
             for nei in neighbors:
                 # nei might be already in the q, fastest way to update the g()?
                 # check valid index
-                if nei[0] < 0 or nei[1] < 0 or nei[0] >= len(self._grid) or nei[1] >= len(self._grid[1]):
+                if nei[0] < 0 or nei[1] < 0 or nei[0] >= len(self._grid) or nei[1] >= len(self._grid[1]) or \
+                    self._grid[nei[0]][nei[1]].state == GridState.VISITED:
                     continue
-                if self._grid[nei[0]][nei[1]].state != GridState.VISITED: # check if the grid is already visited in the map
-                    neighbor = self._grid[nei[0]][nei[1]]
-                    neighbor.relax(current_grid)
-                    neighbor.state = GridState.SEEN
-                    self._priority_queue.put(neighbor)
-                    # wait for evaluating
-                    self._update_queue.put(neighbor)
-                    # visualization
+
+                neighbor = self._grid[nei[0]][nei[1]]
+                neighbor.relax(current_grid)
+                neighbor.state = GridState.SEEN
+                self._priority_queue.put(neighbor)
+                # wait for evaluating
+                self._update_queue.put(neighbor)
+                # visualization
 
         # Done, get the path if reach dst
-        status = PlanStatus(current_grid == self._plan_meta.dest)
-        while status.success and current_grid != src:
+        status = PlanStatus(current_grid.pose == self._plan_meta.dest.pose)
+        while status.success and current_grid.pose != src.pose:
             current_grid.state = GridState.PATH
             status.add_node(current_grid)
             current_grid = current_grid.pred
