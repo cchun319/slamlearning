@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from base_class.grid_status import GridState
 import queue
+import time
 
 class PlanStatus:
     def __init__(self, succeed) -> None:
@@ -17,11 +18,7 @@ class PlanStatus:
         return self._path
 
 class Dijkstra():
-    def __init__(self, plan_meta, grid, update_queue, toggle_queue):
-        self._grid = grid
-        self._plan_meta = plan_meta
-        self._update_queue = update_queue
-        self._toggle_queue = toggle_queue
+    def __init__(self):
         self._priority_queue = queue.PriorityQueue()
         # every method has a queue sorted with some value -> H()
         # should be implemented
@@ -38,7 +35,7 @@ class Dijkstra():
         #           -> if was seen
         #           -> if was occupied 
     
-    def plan(self):
+    def plan(self, plan_meta, grid, update_queue, toggle_queue):
         '''
         pseudo
             set g() of src to 0
@@ -56,6 +53,12 @@ class Dijkstra():
                                    P(g=2)
         '''
         # need to make sure src and dest are assigned
+
+        self._grid = grid
+        self._plan_meta = plan_meta
+        self._update_queue = update_queue
+        self._toggle_queue = toggle_queue
+
         src = self._plan_meta.src
         src.g = 0
         self._priority_queue.put(src)
@@ -65,32 +68,42 @@ class Dijkstra():
             if self._plan_meta.dest.pose == current_grid.pose:
                 break
 
+            if self._grid.get_cell(current_grid.r, current_grid.c).state == GridState.VISITED:
+                continue
+
             # update current grid
-            self._grid[current_grid.r][current_grid.c].state = GridState.VISITED
+            self._grid.udpate_cell_state(current_grid.r, current_grid.c, GridState.VISITED)
             self._update_queue.put(current_grid)
             # TODO: update the grid in the map
             neighbors = current_grid.get_neighbor()
             for nei in neighbors:
                 # nei might be already in the q, fastest way to update the g()?
                 # check valid index
-                if nei[0] < 0 or nei[1] < 0 or nei[0] >= len(self._grid) or nei[1] >= len(self._grid[1]) or \
-                    self._grid[nei[0]][nei[1]].state == GridState.VISITED:
+                if nei[0] < 0 or nei[1] < 0 or nei[0] >= self._grid.height or nei[1] >= self._grid.width or \
+                    self._grid.get_cell(nei[0], nei[1]).state == GridState.VISITED:
                     continue
 
-                neighbor = self._grid[nei[0]][nei[1]]
-                neighbor.relax(current_grid)
+                neighbor = self._grid.get_cell(nei[0], nei[1])
+                neighbor.relax(current_grid, dest = plan_meta.dest)
                 neighbor.state = GridState.SEEN
                 self._priority_queue.put(neighbor)
-                # wait for evaluating
                 self._update_queue.put(neighbor)
-                # visualization
+            
+            # TODO: only sleep when visulization
+            time.sleep(0.05)
 
         # Done, get the path if reach dst
         status = PlanStatus(current_grid.pose == self._plan_meta.dest.pose)
         while status.success and current_grid.pose != src.pose:
             current_grid.state = GridState.PATH
             status.add_node(current_grid)
+            self._update_queue.put(current_grid)
             current_grid = current_grid.pred
+
+        self._plan_meta.src.state = GridState.SRC
+        self._plan_meta.dest.state = GridState.DEST
+        self._update_queue.put(self._plan_meta.src)
+        self._update_queue.put(self._plan_meta.dest)
 
         return status
 

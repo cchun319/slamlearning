@@ -36,6 +36,7 @@ class Cell():
         self._state = state
         self._g = cost
         self._pred = None
+        self.connected = []
     
     @property
     def r(self):
@@ -92,13 +93,6 @@ class Cell():
     def y(self, y):
         self._y = y
     
-    @staticmethod
-    def direction():
-        return [[0,  Cell._diameter, 0,  Cell._hand_length + Cell._diameter],
-                   [0, -Cell._diameter, 0, -Cell._hand_length - Cell._diameter],
-                   [Cell._diameter, 0, Cell._diameter + Cell._hand_length, 0],
-                   [-Cell._diameter, 0, -Cell._diameter -Cell._hand_length, 0]]
-    
     def __str__(self):
         return f"POS: ({self._x},{self._y}), -> ({self._r}, {self._c}), STATE: {self._state}"
     
@@ -111,12 +105,27 @@ class Cell():
            cid += 1
         return neighbors
     
-    def relax(self, potential_pred):
-        self.g = (min(self.g, potential_pred.g + 1)) # TODO: this has to abstract, g + h
-        if self.g == potential_pred.g + 1:
+    def relax(self, potential_pred, dest):
+        h = math.pow(self.r - dest.r, 2) + math.pow(self.c - dest.c, 2)
+        # print(f"relax {self} and {dest} {self.r - dest.r} {self.c - dest.c} and h {h}")
+        self.g = min(self.g, potential_pred.g + 1 + h) # TODO: this has to be abstract, g + h and how to pass dest information
+        if self.g == potential_pred.g + 1 + h:
             self.pred = potential_pred
 
     @property
     def pose(self):
         return Pose(self._r, self._c)
     
+    def reset(self):
+        self._g = math.inf
+        self._state = GridState.UNVISITED
+    
+
+class CellAStar(Cell):
+    def __init__(self, x, y, r, c, state=GridState.UNVISITED, cost=math.inf) -> None:
+        super().__init__(x, y, r, c, state, cost)
+    
+    def heuristic(self):
+        # TODO: it needs the visibilities to the dest
+        # and call by g function
+        return 
