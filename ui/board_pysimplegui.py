@@ -127,6 +127,7 @@ class Board():
         pass
     
     def _reset(self):
+        self._graph.erase()
         self._grid_map.reset()
 
     def run(self):

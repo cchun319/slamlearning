@@ -119,7 +119,7 @@ class Cell():
     def reset(self):
         self._g = math.inf
         self._state = GridState.UNVISITED
-    
+        self.connected.clear()    
 
 class CellAStar(Cell):
     def __init__(self, x, y, r, c, state=GridState.UNVISITED, cost=math.inf) -> None:

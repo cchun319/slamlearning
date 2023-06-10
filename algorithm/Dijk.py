@@ -74,20 +74,15 @@ class Dijkstra():
             # update current grid
             self._grid.udpate_cell_state(current_grid.r, current_grid.c, GridState.VISITED)
             self._update_queue.put(current_grid)
-            # TODO: update the grid in the map
-            neighbors = current_grid.get_neighbor()
-            for nei in neighbors:
-                # nei might be already in the q, fastest way to update the g()?
-                # check valid index
-                if nei[0] < 0 or nei[1] < 0 or nei[0] >= self._grid.height or nei[1] >= self._grid.width or \
-                    self._grid.get_cell(nei[0], nei[1]).state == GridState.VISITED:
+
+            for nei in current_grid.connected:
+                if nei.state == GridState.VISITED:
                     continue
 
-                neighbor = self._grid.get_cell(nei[0], nei[1])
-                neighbor.relax(current_grid, dest = plan_meta.dest)
-                neighbor.state = GridState.SEEN
-                self._priority_queue.put(neighbor)
-                self._update_queue.put(neighbor)
+                nei.relax(current_grid, dest = plan_meta.dest)
+                nei.state = GridState.SEEN
+                self._priority_queue.put(nei)
+                self._update_queue.put(nei)
             
             # TODO: only sleep when visulization
             time.sleep(0.05)

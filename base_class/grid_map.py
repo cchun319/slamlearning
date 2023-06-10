@@ -56,7 +56,6 @@ class GridMap():
         self.get_cell(r2, c2).connected.append(self.get_cell(r1, c1))
 
     def make_maze(self):
-        #TODO: minimum spanning tree
         '''num_of_group = w * h
         while num_of_group != 1:
             random pick (i, j)
@@ -69,7 +68,9 @@ class GridMap():
                 num_of_group - 1
         '''
         num_of_group = self.height * self.width
-        parent = [-1] * num_of_group # -1: means they are their own parent
+
+        parent = [-1] * num_of_group 
+        # -1: means they are their own parent
 
         def in_same_group(id1, id2, parent):
             if id1 == id2:
