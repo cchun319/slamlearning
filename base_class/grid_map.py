@@ -7,6 +7,15 @@ from base_class.grid_status import GridState
 
 
 class GridMap():
+    _offset = [[0, 1], 
+            [1, 1],
+            [1, 0],
+            [1, -1],
+            [0, -1],
+            [-1, -1],
+            [-1, 0],
+            [-1, -1]]
+
     def __init__(self, num_of_row, num_of_col) -> None:
         self._mutex = Lock()
 
@@ -54,6 +63,19 @@ class GridMap():
     def connect_cell(self, r1, c1, r2, c2):
         self.get_cell(r1, c1).connected.append(self.get_cell(r2, c2))
         self.get_cell(r2, c2).connected.append(self.get_cell(r1, c1))
+    
+    def is_valid_id(self, r, c):
+        return r >= 0 and c >= 0 and c < self.width and r < self.height
+    
+    def get_neighbor(self, r, c):
+        # TODO: neighbor and direction should be hooked
+        neighbors = []
+        for offset in GridMap._offset:
+            neighbor_r = r + offset[0]
+            neighbor_c = c + offset[1]
+            if self.is_valid_id(neighbor_r, neighbor_c):
+                neighbors.append((neighbor_r, neighbor_c)) 
+        return neighbors
 
     def make_maze(self):
         '''num_of_group = w * h
@@ -67,7 +89,9 @@ class GridMap():
             merge two group
                 num_of_group - 1
         '''
-        num_of_group = self.height * self.width
+        num_of_group = self.height * self.width 
+        # for minimum spanning tree, minimum number of edge is num of cells - 1
+        # it needs some redundent edges to ensure dest and src are connected
 
         parent = [-1] * num_of_group 
         # -1: means they are their own parent
@@ -97,14 +121,30 @@ class GridMap():
             return id
 
         while num_of_group != 1:
+            '''
+            scenario of testing LFA*
+            1. set src and dest
+            2. plan and move current grid
+            3. while the current grid is moving
+            4. randomly close/open the routes on the path
+            5. the graph may or may not connected, either way, planner should report the status with brief discription
+                1. plan sucess -> current grid reaches the dest
+                2. plan fail -> not conneted
+                                current grid doesn't reach the dest
+
+
+            after all cells are connected
+            1. open more routes for cells
+            '''
             g1r = random.randint(0, self.height - 1)
             g1c = random.randint(0, self.width - 1)
 
             id1 = g1r * self.width + g1c
 
-            neighbors = self.get_cell(g1r, g1c).get_neighbor()
+            neighbors = self.get_neighbor(g1r, g1c)
+            random.shuffle(neighbors)
             for n in neighbors:
-                if n[0] >= 0 and n[1] >= 0 and n[1] < self.width and n[0] < self.height and not in_same_group(id1, n[0] * self.width + n[1], parent):
+                if not in_same_group(id1, n[0] * self.width + n[1], parent):
                     parent[get_parent(n[0] * self.width + n[1], parent)] = id1
                     self.connect_cell(n[0], n[1], g1r, g1c)
                     num_of_group -= 1

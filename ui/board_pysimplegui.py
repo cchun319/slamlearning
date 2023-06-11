@@ -57,9 +57,11 @@ class Board():
 
     def drawConnect(self, cellA, cellB):
         midx, midy = (cellA.x + cellB.x) / 2, (cellA.y + cellB.y) / 2 
-        theta = np.arctan2(cellB.y - cellA.y, cellB.x - cellA.x)
-        self._graph.draw_line((midx - Cell._hand_length * np.cos(theta), midy - Cell._hand_length * np.sin(theta)),
-                              (midx + Cell._hand_length * np.cos(theta), midy + Cell._hand_length * np.sin(theta)), width = Cell._hand_width)        
+        theta = np.arctan2(midy - cellB.y, midx - cellB.x)
+
+        # end pts: center vector + direction vector * radius, direction vector can be gotten by mid - center vector
+        self._graph.draw_line((cellA.x + Cell._diameter * np.cos(theta + np.pi), cellA.y + Cell._diameter * np.sin(theta + np.pi)),
+                              (cellB.x + Cell._diameter * np.cos(theta), cellB.y + Cell._diameter * np.sin(theta)), width = Cell._hand_width)        
 
     def drawCenter(self, cell_):
         self._graph.draw_circle((cell_.x, cell_.y), Cell._diameter, fill_color=Cell._GridColorMap[cell_.state], line_color='black')
@@ -105,10 +107,9 @@ class Board():
                 self._update_queue.put(self._grid_map.get_cell(r_id, c_id))
                 # update neighbors
                 # the new information should trikle into the plannar
-                neighbors = self._grid_map.get_cell(r_id, c_id).get_neighbor()
+                neighbors = self._grid_map.get_neighbor(r_id, c_id)
                 for n in neighbors:
-                    if n[0] >= 0 and n[1] >= 0 and n[1] < self._grid_map.width and n[0] < self._grid_map.height:
-                        self._update_queue.put(self._grid_map.get_cell(n[0], n[1]))                        
+                    self._update_queue.put(self._grid_map.get_cell(n[0], n[1]))                        
         
         return
 

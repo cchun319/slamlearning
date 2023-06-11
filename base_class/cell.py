@@ -27,7 +27,7 @@ class Cell():
                     GridState.SEEN: 'yellow',
                     GridState.OCCUPIED: 'black',
                     GridState.PATH: 'blue'}
-    _offset = [1, 0, -1, 0]
+
     def __init__(self, x, y, r, c, state = GridState.UNVISITED, cost = math.inf) -> None:
         self._x = x
         self._y = y
@@ -96,15 +96,6 @@ class Cell():
     def __str__(self):
         return f"POS: ({self._x},{self._y}), -> ({self._r}, {self._c}), STATE: {self._state}"
     
-    def get_neighbor(self):
-        # TODO: neighbor and direction should be hooked
-        neighbors = []
-        cid = 1
-        for i in range(len(Cell._offset)):
-           neighbors.append((self._r + Cell._offset[i], self._c + Cell._offset[cid % len(Cell._offset)])) 
-           cid += 1
-        return neighbors
-    
     def relax(self, potential_pred, dest):
         h = math.pow(self.r - dest.r, 2) + math.pow(self.c - dest.c, 2)
         # print(f"relax {self} and {dest} {self.r - dest.r} {self.c - dest.c} and h {h}")
@@ -121,11 +112,27 @@ class Cell():
         self._state = GridState.UNVISITED
         self.connected.clear()    
 
-class CellAStar(Cell):
+class CellLFAStar(Cell):
     def __init__(self, x, y, r, c, state=GridState.UNVISITED, cost=math.inf) -> None:
         super().__init__(x, y, r, c, state, cost)
+        self._rhs = math.inf
     
-    def heuristic(self):
-        # TODO: it needs the visibilities to the dest
-        # and call by g function
-        return 
+    @property
+    def rhs(self):
+        return self._rhs
+    
+    @rhs.setter
+    def rhs(self, val):
+        self._rhs = val
+
+    def k1(self):
+        return min(self.g, self.rhs) + h(n, goal)
+    
+    def k2(self):
+        return min(self.g, self.rhs)
+
+    def __eq__(self, other):
+        return self.k1() == other.k1() and self.k2() == other.k2()
+    
+    def __lt__(self, other):
+        return self.k1() < other.k1() or (self.k1() == other.k1() and self.k2() < other.k2())

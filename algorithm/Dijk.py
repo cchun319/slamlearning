@@ -53,6 +53,7 @@ class Dijkstra():
                                    P(g=2)
         '''
         # need to make sure src and dest are assigned
+        # circular action -> [plan -> move -> plan -> move ...]
 
         self._grid = grid
         self._plan_meta = plan_meta
