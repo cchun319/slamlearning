@@ -130,6 +130,7 @@ class Board():
     def _reset(self):
         self._graph.erase()
         self._grid_map.reset()
+        self._plan_meta.reset()
 
     def run(self):
         # TODO: Hook up to the button and ctrl-c
@@ -158,7 +159,8 @@ class Board():
                 self.drawAll()
                 self._state = UiState.STANDBY
             elif self._state == UiState.MAZE:
-                self._grid_map.make_maze()
+                self._grid_map.connect_all()
+                # self._grid_map.make_maze()
                 self.drawAll()
                 self._state = UiState.STANDBY
             elif callable(event):

@@ -38,6 +38,9 @@ class PlanMeta():
     
     def __str__(self):
         return f"plan meta: source {self._src} | dest {self._dest} "
+    
+    def reset(self):
+        self._src = self._dest = None        
 
 
 class PlannerManager():

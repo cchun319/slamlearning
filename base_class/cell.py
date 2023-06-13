@@ -12,7 +12,7 @@ class Pose():
     def __eq__(self, other) -> bool:
         return self._x == other._x and self._y == other._y
 
-@total_ordering
+# @total_ordering
 class Cell():
     '''
     The class is the node in a graph
@@ -96,11 +96,10 @@ class Cell():
     def __str__(self):
         return f"POS: ({self._x},{self._y}), -> ({self._r}, {self._c}), STATE: {self._state}"
     
-    def relax(self, potential_pred, dest):
-        h = math.pow(self.r - dest.r, 2) + math.pow(self.c - dest.c, 2)
+    def relax(self, potential_pred):
         # print(f"relax {self} and {dest} {self.r - dest.r} {self.c - dest.c} and h {h}")
-        self.g = min(self.g, potential_pred.g + 1 + h) # TODO: this has to be abstract, g + h and how to pass dest information
-        if self.g == potential_pred.g + 1 + h:
+        self.g = min(self.g, potential_pred.g + 1)
+        if self.g == potential_pred.g + 1:
             self.pred = potential_pred
 
     @property

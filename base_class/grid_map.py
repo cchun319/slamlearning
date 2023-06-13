@@ -152,6 +152,13 @@ class GridMap():
             # print(f"parent {parent}")
         
         return
+    
+    def connect_all(self): 
+        for r in range(self._num_of_row):
+            for c in range(self._num_of_col):
+                neighbors = self.get_neighbor(r, c)
+                for n in neighbors:
+                    self.connect_cell(n[0], n[1], r, c)
 
 
     

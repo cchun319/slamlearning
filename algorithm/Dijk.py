@@ -2,6 +2,8 @@
 from base_class.grid_status import GridState
 import queue
 import time
+import heapq
+import math
 
 class PlanStatus:
     def __init__(self, succeed) -> None:
@@ -19,7 +21,7 @@ class PlanStatus:
 
 class Dijkstra():
     def __init__(self):
-        self._priority_queue = queue.PriorityQueue()
+        self._priority_queue = []
         # every method has a queue sorted with some value -> H()
         # should be implemented
 
@@ -62,10 +64,10 @@ class Dijkstra():
 
         src = self._plan_meta.src
         src.g = 0
-        self._priority_queue.put(src)
+        heapq.heappush(self._priority_queue, (src.g, src))
         current_grid = None
-        while not self._priority_queue.empty():
-            current_grid = self._priority_queue.get()
+        while len(self._priority_queue) != 0:
+            current_grid = heapq.heappop(self._priority_queue)[1]
             if self._plan_meta.dest.pose == current_grid.pose:
                 break
 
@@ -80,9 +82,9 @@ class Dijkstra():
                 if nei.state == GridState.VISITED:
                     continue
 
-                nei.relax(current_grid, dest = plan_meta.dest)
+                nei.relax(current_grid)
                 nei.state = GridState.SEEN
-                self._priority_queue.put(nei)
+                heapq.heappush(self._priority_queue, (nei.g + math.sqrt(math.pow(nei.r - self._plan_meta.dest.r, 2) + math.pow(nei.c - self._plan_meta.dest.c, 2)), nei))
                 self._update_queue.put(nei)
             
             # TODO: only sleep when visulization
