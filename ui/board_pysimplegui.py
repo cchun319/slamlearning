@@ -159,8 +159,9 @@ class Board():
                 self.drawAll()
                 self._state = UiState.STANDBY
             elif self._state == UiState.MAZE:
-                self._grid_map.connect_all()
-                # self._grid_map.make_maze()
+                # TODO: add a connect all button or consolidate things here
+                # self._grid_map.connect_all()
+                self._grid_map.make_maze()
                 self.drawAll()
                 self._state = UiState.STANDBY
             elif callable(event):
