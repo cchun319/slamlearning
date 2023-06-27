@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
 from enum import Enum
 from algorithm.Dijk import Dijkstra
+from algorithm.lifelong_A_star import LifeLongAStar
 import time
 from base_class.grid_status import GridState
 
 
 class PlanMethod(Enum):
     DIJK = 'DIJK'
-    A_STAR = 'A_STAR'
+    A_STAR = 'A*'
+    LIFELONG_A_STAR = 'LFA*'
 
 class PlanMeta():
-    def __init__(self, method = PlanMethod.DIJK) -> None:
+    def __init__(self) -> None:
         self._src = self._dest = None
-        self._method = method
+        self.method = 'LFA*'
     
     def isGoodToPlan(self):
         return self._src is not None and self._dest is not None
+    
+    @property
+    def method(self):
+        return self._method
+    
+    @method.setter
+    def method(self, method):
+        # TODO rasie exception if method doesn't exist
+        self._method = PlanMethod(method)
     
     def udpate(self, cell):
         if cell.state == GridState.SRC:
@@ -37,7 +48,7 @@ class PlanMeta():
         return self._dest
     
     def __str__(self):
-        return f"plan meta: source {self._src} | dest {self._dest} "
+        return f"plan meta: source {self._src} | dest {self._dest}, and method {self._method}"
     
     def reset(self):
         self._src = self._dest = None        
@@ -50,6 +61,8 @@ class PlannerManager():
             return Dijkstra()
         elif method == PlanMethod.A_STAR:
             return
+        elif method == PlanMethod.LIFELONG_A_STAR:
+            return LifeLongAStar()
 
     @staticmethod
     def run(msg_queue, update_queue, grid_map):

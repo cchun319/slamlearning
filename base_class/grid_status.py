@@ -14,6 +14,9 @@ class GridState(Enum):
     SRC = 5 # green
     DEST = 6 # red
     PATH = 7
+    LOCAL_OVERCONSISTENT = 8
+    LOCAL_CONSITENT = 9
+    LOCAL_UNDERCONSISTENT = 10
 
 @total_ordering
 class Grid(QTableWidgetItem):

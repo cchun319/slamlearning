@@ -1,23 +1,9 @@
 #!/usr/bin/env python3
 from base_class.grid_status import GridState
-import queue
+from base_class.plan_status import PlanStatus
 import time
 import heapq
 import math
-
-class PlanStatus:
-    def __init__(self, succeed) -> None:
-        self._path = []
-        self._plan_succeed = succeed
-    
-    def success(self):
-        return self._plan_succeed
-    
-    def add_node(self, node):
-        self._path.insert(0, node)
-    
-    def path(self):
-        return self._path
 
 class Dijkstra():
     def __init__(self):
@@ -78,7 +64,7 @@ class Dijkstra():
             self._grid.udpate_cell_state(current_grid.r, current_grid.c, GridState.VISITED)
             self._update_queue.put(current_grid)
 
-            for nei in current_grid.connected:
+            for nei in self._grid.get_cell_neighbors(current_grid):
                 if nei.state == GridState.VISITED:
                     continue
 

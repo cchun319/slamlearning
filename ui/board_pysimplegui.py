@@ -2,7 +2,6 @@
 import PySimpleGUI as sg
 from PySimpleGUI import TIMEOUT_KEY
 from enum import Enum
-from threading import Event
 from base_class.grid_status import GridState
 from base_class.cell import Cell
 from algorithm.planner_manager import PlanMeta
@@ -23,19 +22,18 @@ class UiState(Enum):
     MAZE = 'MAZE'
 
 class Board():
-    def __init__(self, num_of_row, num_of_col, msg_q, grid_map, update_queue) -> None:
+    def __init__(self, msg_q, grid_map, update_queue) -> None:
         sg.theme('DarkGrey5')
-        self._width = num_of_col * 2 * (Cell._hand_length + Cell._diameter)
-        self._height = num_of_row * 2 * (Cell._hand_length + Cell._diameter)
+        self._grid_map = grid_map        
+        self._width = self._grid_map.width * 2 * (Cell._hand_length + Cell._diameter)
+        self._height = self._grid_map.height * 2 * (Cell._hand_length + Cell._diameter)
         self._state = UiState.STANDBY
         self.src = self.dest = self.toggle = self.plan = False
         self._update_queue = update_queue
         self._plan_meta = PlanMeta()
-        self._plannar_flag = Event()
-        self._method = "DIJK"
         self._msg_q = msg_q
-        self._grid_map = grid_map        
-    
+        self._toggle_queue = None
+
         layout = [[sg.Graph((self._width, self._height),(0,0), (self._width, self._height),
                             background_color='white',
                             key='canvas', enable_events=True)],
@@ -45,7 +43,8 @@ class Board():
                  sg.Button('TOGGLE', size=(6, 1), button_color='white on green',key = lambda: self.setMode('TOGGLE')),
                  sg.Button('PLAN', size=(5, 1), button_color='white on green',  key = lambda: self.setMode('PLAN')),
                  sg.Button('MAZE', size=(5, 1), button_color='white on green',  key = lambda: self.setMode('MAZE')), 
-                 sg.Button('RESET', size=(5, 1), button_color='white on green',  key = lambda: self.setMode('RESET'))]]
+                 sg.Button('RESET', size=(5, 1), button_color='white on green',  key = lambda: self.setMode('RESET')),
+                 sg.Combo(['DIJK','A*', 'LFA*'], size=(5, 1), default_value='LFA*',enable_events=True, key='METHODS')]]
 
         self._window = sg.Window('GridMaker',
                                     layout, resizable=True, finalize=True)
@@ -55,61 +54,94 @@ class Board():
         # TODO: raise execption if invalid mode
         self._state = UiState(mode)
 
-    def drawConnect(self, cellA, cellB):
-        midx, midy = (cellA.x + cellB.x) / 2, (cellA.y + cellB.y) / 2 
+    def drawConnect(self, cellA, cellB, reset = False):
+        default_color = 'white' if reset == True else 'black'
+        midx, midy = (cellA.x + cellB.x) / 2, (cellA.y + cellB.y) / 2
+        self._graph.draw_circle((midx, midy), Cell._diameter / 2, fill_color=default_color, line_color=default_color)
+ 
         theta = np.arctan2(midy - cellB.y, midx - cellB.x)
 
         # end pts: center vector + direction vector * radius, direction vector can be gotten by mid - center vector
         self._graph.draw_line((cellA.x + Cell._diameter * np.cos(theta + np.pi), cellA.y + Cell._diameter * np.sin(theta + np.pi)),
-                              (cellB.x + Cell._diameter * np.cos(theta), cellB.y + Cell._diameter * np.sin(theta)), width = Cell._hand_width)        
+                              (cellB.x + Cell._diameter * np.cos(theta), cellB.y + Cell._diameter * np.sin(theta)), width = Cell._hand_width, color=default_color)        
 
     def drawCenter(self, cell_):
         self._graph.draw_circle((cell_.x, cell_.y), Cell._diameter, fill_color=Cell._GridColorMap[cell_.state], line_color='black')
 
-    def drawCell(self, cell_):
-        if cell_.state != GridState.OCCUPIED:
-            for neighbor in cell_.connected:
-                self.drawConnect(cell_, neighbor)
+    def drawCell(self, cell_, init = False):
+        # TODO: clear the previous drawn passages
+        if init == False:
+            for neighbor in self._grid_map.get_potential_neighbors_cells(cell_):
+                self.drawConnect(cell_, neighbor, True)
+        for neighbor in self._grid_map.get_cell_neighbors(cell_):
+            self.drawConnect(cell_, neighbor)
         self.drawCenter(cell_)
 
     def drawAll(self):
         for i in range(self._grid_map.height):
             for j in range(self._grid_map.width):
-                self.drawCell(self._grid_map.get_cell(i, j))
+                self.drawCell(self._grid_map.get_cell(i, j), init=True)
     
-    def pixel_to_index(self, val):
+    def pixel_to_raw_index(self, val):
+        # TODO: + _diameter doesn't feel right
         c_id = int((val[0] + Cell._diameter) / (Cell._hand_length + Cell._diameter))
         r_id = int((val[1] + Cell._diameter) / (Cell._hand_length + Cell._diameter))
-        if r_id %2 == 0 or c_id %2 == 0:
-            return (-1, -1)
 
-        return (int((c_id - 1) / 2), int((r_id - 1) / 2))
+        return c_id, r_id
+
+        # return (int((c_id - 1) / 2), int((r_id - 1) / 2))
     
-    def select(self, indices):
-        if indices == (-1,-1):
-            return
+    def select(self, pixels_coordinates):
+
+        raw_c_id, raw_r_id = self.pixel_to_raw_index(pixels_coordinates)
         
-        c_id = indices[0]
-        r_id = indices[1]
-        if self._state in [UiState.SELECT_DEST, UiState.SELECT_SRC]:
-            new_state = GridState.DEST if self._state == UiState.SELECT_DEST else GridState.SRC
-            self._grid_map.udpate_cell_state(r_id, c_id, new_state)
-            self._update_queue.put(self._grid_map.get_cell(r_id, c_id))
-            prev = self._plan_meta.udpate(self._grid_map.get_cell(r_id, c_id))
-            if prev is not None:
-                self._grid_map.udpate_cell_state(prev.r, prev.c, GridState.UNVISITED)
-                self._update_queue.put(prev)
-        elif self._state == UiState.TOGGLE_OBSTABLE:
-            # should not toggle src or dest
-            if self._grid_map.get_cell(r_id, c_id).state not in [GridState.SRC, GridState.DEST]:
+        toggle_cell = raw_c_id % 2 == 1 and raw_r_id % 2 == 1
+
+        if toggle_cell:
+            r_id = int(raw_r_id / 2)
+            c_id = int(raw_c_id / 2)
+            if self._state in [UiState.SELECT_DEST, UiState.SELECT_SRC]:
+                new_state = GridState.DEST if self._state == UiState.SELECT_DEST else GridState.SRC
+                self._grid_map.udpate_cell_state(r_id, c_id, new_state)
+                self._update_queue.put(self._grid_map.get_cell(r_id, c_id))
+                prev = self._plan_meta.udpate(self._grid_map.get_cell(r_id, c_id))
+                if prev is not None:
+                    self._grid_map.udpate_cell_state(prev.r, prev.c, GridState.UNVISITED)
+                    self._update_queue.put(prev)
+            elif self._grid_map.get_cell(r_id, c_id).state not in [GridState.SRC, GridState.DEST]:
+                '''
+                toggle cell (r, c)
+                remove all connected passage from r, c
+                remove all connected passage to r, c
+                '''
                 new_state = GridState.UNVISITED if self._grid_map.get_cell(r_id, c_id).state == GridState.OCCUPIED else GridState.OCCUPIED
                 self._grid_map.udpate_cell_state(r_id, c_id, new_state)
                 self._update_queue.put(self._grid_map.get_cell(r_id, c_id))
                 # update neighbors
-                # the new information should trikle into the plannar
-                neighbors = self._grid_map.get_neighbor(r_id, c_id)
-                for n in neighbors:
-                    self._update_queue.put(self._grid_map.get_cell(n[0], n[1]))                        
+                neighbors = self._grid_map.get_cell_neighbors(self._grid_map.get_cell(r_id, c_id))
+                for nei in neighbors:
+                    # cut the connection
+                    self._grid_map.remove_cell_edge(self._grid_map.get_cell(r_id, c_id), nei)
+                    self._update_queue.put(nei)
+                    self._toggle_queue.put(((r_id, c_id), (nei.r, nei.c)))                        
+
+        elif self._state == UiState.TOGGLE_OBSTABLE:
+            '''
+            toggle passage (r1, c1), (r2, c2) -> a valid select radius between two cells
+            '''
+            # get the passage id pair (r1, c1, r2, c2)
+
+            r1 = int((raw_r_id - 1) / 2)if raw_r_id % 2 == 0 else int(raw_r_id / 2)
+            c1 = int((raw_c_id - 1) / 2)if raw_c_id % 2 == 0 else int(raw_c_id / 2)
+            r2 = int((raw_r_id + 1) / 2)if raw_r_id % 2 == 0 else int(raw_r_id / 2)
+            c2 = int((raw_c_id + 1) / 2)if raw_c_id % 2 == 0 else int(raw_c_id / 2)
+            if self._grid_map.has_edge(r1, c1, r2, c2):
+                self._grid_map.remove_edge(r1, c1, r2, c2)
+            else:
+                self._grid_map.add_edge(r1, c1, r2, c2)
+            self._update_queue.put(self._grid_map.get_cell(r1, c1))                        
+            self._update_queue.put(self._grid_map.get_cell(r2, c2))
+            self._toggle_queue.put(((r1, c1), (r2, c2)))                       
         
         return
 
@@ -124,9 +156,6 @@ class Board():
         else:
             print("Not ready for plan")
     
-    def _plan_done(self):
-        pass
-    
     def _reset(self):
         self._graph.erase()
         self._grid_map.reset()
@@ -135,22 +164,17 @@ class Board():
     def run(self):
         # TODO: Hook up to the button and ctrl-c
         # TODO: not kill properly
-        # TODO: plot should be another thread, planner should be one thread
-        # TODO: 
 
         self.drawAll()
         while True:
             while self._update_queue.qsize() > 0:
                 self.drawCell(self._update_queue.get())
-            if self._plannar_flag.is_set():
-                self._plan_done()
-                self._plannar_flag.clear()
-            event, values = self._window.read(timeout=100) # 100 ms
+            event, values = self._window.read(timeout=100) # 100 ms timeout for updating cell status on the board
             if event in (None, 'Exit'):
                 self._msg_q.put('Exit')
                 break
             elif self._state in [UiState.SELECT_DEST, UiState.SELECT_SRC, UiState.TOGGLE_OBSTABLE] and event == 'canvas':
-                self.select(self.pixel_to_index(values[event]))
+                self.select(values[event])
             elif self._state == UiState.PLAN:
                 self._plan()
                 self._state = UiState.STANDBY
@@ -164,6 +188,9 @@ class Board():
                 self._grid_map.make_maze()
                 self.drawAll()
                 self._state = UiState.STANDBY
+            elif event == 'METHODS':
+                self._plan_meta.method = values['METHODS']
+                print(f"update plan method val: {self._plan_meta}")
             elif callable(event):
                 event()
         self._window.close()

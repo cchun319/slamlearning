@@ -26,7 +26,10 @@ class Cell():
                     GridState.VISITED: 'gray',
                     GridState.SEEN: 'yellow',
                     GridState.OCCUPIED: 'black',
-                    GridState.PATH: 'blue'}
+                    GridState.PATH: 'blue',
+                    GridState.LOCAL_OVERCONSISTENT: 'yellow',
+                    GridState.LOCAL_CONSITENT: 'gray',
+                    GridState.LOCAL_UNDERCONSISTENT: 'purple'}
 
     def __init__(self, x, y, r, c, state = GridState.UNVISITED, cost = math.inf) -> None:
         self._x = x
@@ -36,7 +39,6 @@ class Cell():
         self._state = state
         self._g = cost
         self._pred = None
-        self.connected = []
     
     @property
     def r(self):
@@ -109,29 +111,3 @@ class Cell():
     def reset(self):
         self._g = math.inf
         self._state = GridState.UNVISITED
-        self.connected.clear()    
-
-class CellLFAStar(Cell):
-    def __init__(self, x, y, r, c, state=GridState.UNVISITED, cost=math.inf) -> None:
-        super().__init__(x, y, r, c, state, cost)
-        self._rhs = math.inf
-    
-    @property
-    def rhs(self):
-        return self._rhs
-    
-    @rhs.setter
-    def rhs(self, val):
-        self._rhs = val
-
-    def k1(self):
-        return min(self.g, self.rhs) + h(n, goal)
-    
-    def k2(self):
-        return min(self.g, self.rhs)
-
-    def __eq__(self, other):
-        return self.k1() == other.k1() and self.k2() == other.k2()
-    
-    def __lt__(self, other):
-        return self.k1() < other.k1() or (self.k1() == other.k1() and self.k2() < other.k2())
