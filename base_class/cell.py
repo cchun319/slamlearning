@@ -39,6 +39,7 @@ class Cell():
         self._state = state
         self._g = cost
         self._pred = None
+        self._rhs = cost
     
     @property
     def r(self):
@@ -96,7 +97,7 @@ class Cell():
         self._y = y
     
     def __str__(self):
-        return f"POS: ({self._x},{self._y}), -> ({self._r}, {self._c}), STATE: {self._state}"
+        return f"POS: ({self._x},{self._y}), -> ({self._r}, {self._c}), STATE: {self._state} || g: {self.g}, rhs:{self.rhs}"
     
     def relax(self, potential_pred):
         # print(f"relax {self} and {dest} {self.r - dest.r} {self.c - dest.c} and h {h}")
@@ -109,5 +110,13 @@ class Cell():
         return Pose(self._r, self._c)
     
     def reset(self):
-        self._g = math.inf
+        self._g = self._rhs = math.inf
         self._state = GridState.UNVISITED
+
+    @property
+    def rhs(self):
+        return self._rhs
+    
+    @rhs.setter
+    def rhs(self, val):
+        self._rhs = val

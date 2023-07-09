@@ -4,6 +4,7 @@ from PySimpleGUI import TIMEOUT_KEY
 from enum import Enum
 from base_class.grid_status import GridState
 from base_class.cell import Cell
+from base_class.plan_status import PlanStatus
 from algorithm.planner_manager import PlanMeta
 import numpy as np
 
@@ -22,7 +23,7 @@ class UiState(Enum):
     MAZE = 'MAZE'
 
 class Board():
-    def __init__(self, msg_q, grid_map, update_queue) -> None:
+    def __init__(self, msg_q, grid_map, update_queue, toggle_queue, reset_event) -> None:
         sg.theme('DarkGrey5')
         self._grid_map = grid_map        
         self._width = self._grid_map.width * 2 * (Cell._hand_length + Cell._diameter)
@@ -32,7 +33,10 @@ class Board():
         self._update_queue = update_queue
         self._plan_meta = PlanMeta()
         self._msg_q = msg_q
-        self._toggle_queue = None
+        self._toggle_queue = toggle_queue
+        self._reset_event = reset_event
+
+        self._previous_path = None # TODO?
 
         layout = [[sg.Graph((self._width, self._height),(0,0), (self._width, self._height),
                             background_color='white',
@@ -156,10 +160,30 @@ class Board():
         else:
             print("Not ready for plan")
     
+    def drawPlanStatus(self, plan_status):
+        # revert the prvious drawing
+        if self._previous_path is not None:
+            for p_path_node in self._previous_path:
+                self._update_queue.put(p_path_node)
+
+        # draw the path
+        for path_node in plan_status.path():
+            path_node.state = GridState.PATH
+            self._update_queue.put(path_node)
+
+        # draw start and end points
+        # TODO: should this be from first and last element from the plan status?
+        self._plan_meta.src.state = GridState.SRC
+        self._plan_meta.dest.state = GridState.DEST
+        self._update_queue.put(self._plan_meta.src)
+        self._update_queue.put(self._plan_meta.dest)
+        self._previous_path = plan_status.path()
+    
     def _reset(self):
         self._graph.erase()
         self._grid_map.reset()
         self._plan_meta.reset()
+        self._reset_event.set()
 
     def run(self):
         # TODO: Hook up to the button and ctrl-c
@@ -168,9 +192,16 @@ class Board():
         self.drawAll()
         while True:
             while self._update_queue.qsize() > 0:
-                self.drawCell(self._update_queue.get())
+                thing_to_draw = self._update_queue.get()
+                if isinstance(thing_to_draw, Cell):
+                    self.drawCell(thing_to_draw)
+                elif isinstance(thing_to_draw, PlanStatus):
+                    self.drawPlanStatus(thing_to_draw)
+                else:
+                    print(f'UI not recognize the instance {thing_to_draw}')
             event, values = self._window.read(timeout=100) # 100 ms timeout for updating cell status on the board
             if event in (None, 'Exit'):
+                self._reset_event.set()
                 self._msg_q.put('Exit')
                 break
             elif self._state in [UiState.SELECT_DEST, UiState.SELECT_SRC, UiState.TOGGLE_OBSTABLE] and event == 'canvas':

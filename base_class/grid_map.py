@@ -99,7 +99,7 @@ class GridMap():
         self.edge_map = {}
         for r in range(self._num_of_row):
             for c in range(self._num_of_col):
-                self._grid[r][c].reset()
+                self._grid[r][c].reset()        
                 
     @property
     def height(self):

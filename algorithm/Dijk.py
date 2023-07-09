@@ -23,7 +23,7 @@ class Dijkstra():
         #           -> if was seen
         #           -> if was occupied 
     
-    def plan(self, plan_meta, grid, update_queue, toggle_queue):
+    def plan(self, plan_meta, grid, update_queue, toggle_queue, reset_event):
         '''
         pseudo
             set g() of src to 0
@@ -79,15 +79,10 @@ class Dijkstra():
         # Done, get the path if reach dst
         status = PlanStatus(current_grid.pose == self._plan_meta.dest.pose)
         while status.success and current_grid.pose != src.pose:
-            current_grid.state = GridState.PATH
             status.add_node(current_grid)
-            self._update_queue.put(current_grid)
             current_grid = current_grid.pred
 
-        self._plan_meta.src.state = GridState.SRC
-        self._plan_meta.dest.state = GridState.DEST
-        self._update_queue.put(self._plan_meta.src)
-        self._update_queue.put(self._plan_meta.dest)
+        self._update_queue.put(status)
 
-        return status
+        return status.success
 

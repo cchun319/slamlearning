@@ -65,7 +65,7 @@ class PlannerManager():
             return LifeLongAStar()
 
     @staticmethod
-    def run(msg_queue, update_queue, grid_map):
+    def run(msg_queue, update_queue, grid_map, toggle_queue, reset_event):
         while True:
             time.sleep(0.2)
             if msg_queue.qsize() > 0:
@@ -81,4 +81,5 @@ class PlannerManager():
                     grid is the snapshot
                     '''
                     planner = PlannerManager.planner(s._method)
-                    planner.plan(s, grid_map, update_queue, None)
+                    planner.plan(s, grid_map, update_queue, toggle_queue, reset_event)
+                    reset_event.clear()

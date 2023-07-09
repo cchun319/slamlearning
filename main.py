@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import queue
-from threading import Thread
+from threading import Thread, Event
 from ui.board_pysimplegui import Board
 from algorithm.planner_manager import PlannerManager
 from base_class.grid_map import GridMap
@@ -27,13 +27,24 @@ def main():
 
     request_queue = queue.Queue()
     update_queue = queue.Queue()
+    toggle_queue = queue.Queue()
+
+    reset_event = Event()
 
     Cell._diameter = 8
     Cell._hand_length = 20
 
     grid_map = GridMap(args.rows, args.cols)
-    ui_t = Thread(name='UI', target=ui_entry, args=(request_queue, update_queue, grid_map))
-    planner_t = Thread(name='Planner', target=PlannerManager.run, args=(request_queue, update_queue, grid_map))
+    ui_t = Thread(name='UI', target=ui_entry, args=(request_queue,
+                                                    update_queue,
+                                                    grid_map,
+                                                    toggle_queue,
+                                                    reset_event))
+    planner_t = Thread(name='Planner', target=PlannerManager.run, args=(request_queue,
+                                                                        update_queue,
+                                                                        grid_map,
+                                                                        toggle_queue,
+                                                                        reset_event))
     
     planner_t.start()
     ui_t.start()
@@ -41,8 +52,8 @@ def main():
     planner_t.join()
     ui_t.join()
 
-def ui_entry(msg_q, update_queue, grid_map):
-    b_ = Board(msg_q, grid_map, update_queue)
+def ui_entry(msg_q, update_queue, grid_map, toggle_queue, reset_event):
+    b_ = Board(msg_q, grid_map, update_queue, toggle_queue, reset_event)
     b_.run()
 
 if __name__ == '__main__':
