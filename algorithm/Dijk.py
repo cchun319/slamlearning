@@ -1,17 +1,29 @@
 #!/usr/bin/env python3
-from i_planner import PlanStatus
-from grid_status import GridState
-from time import time, sleep
+from base_class.grid_status import GridState
+from base_class.plan_status import PlanStatus
+import time
+import heapq
+import math
 
-class Dijkstra(PlannerInterface):
-    def __init__(self, grid_map, grid_queue):
-        super().__init__(grid_map)
-        self._grid_map = grid_map
-        self._grid_queue = grid_queue
+class Dijkstra():
+    def __init__(self):
+        self._priority_queue = []
+        # every method has a queue sorted with some value -> H()
+        # should be implemented
+
         # The grid should be share between UI and planner for the
         # spontaneous adding/canceling obstacles
+        # 
+        # 1. take deepcopy of 2d grid, flatten and sort(PQ) with the rhs
+        # 2. plan
+        # 3. if user toggles cells, add/remove free space
+        #       toggle_queue, indicate the cell is freed/occupied
+        #       -> update 2d grid(O(1)) and the cell in PQ(O(n))
+        #           -> if was visited
+        #           -> if was seen
+        #           -> if was occupied 
     
-    def plan(self):
+    def plan(self, plan_meta, grid, update_queue, toggle_queue, reset_event):
         '''
         pseudo
             set g() of src to 0
@@ -28,44 +40,49 @@ class Dijkstra(PlannerInterface):
                                    |
                                    P(g=2)
         '''
-        super().plan()
         # need to make sure src and dest are assigned
-        self._grid_queue.put(self._map_info.src())
-        self._grid_queue.put(self._map_info.dest())
-        src = self._map_info.src()
-        src.set_g(0)
-        self._priority_queue.put(src)
+        # circular action -> [plan -> move -> plan -> move ...]
+
+        self._grid = grid
+        self._plan_meta = plan_meta
+        self._update_queue = update_queue
+        self._toggle_queue = toggle_queue
+
+        src = self._plan_meta.src
+        src.g = 0
+        heapq.heappush(self._priority_queue, (src.g, src))
         current_grid = None
-        while not (self._priority_queue.empty() or self._map_info.is_dest(current_grid)):
-            if not self.running():
+        while len(self._priority_queue) != 0:
+            current_grid = heapq.heappop(self._priority_queue)[1]
+            if self._plan_meta.dest.pose == current_grid.pose:
                 break
-            current_grid = self._priority_queue.get()
-            if self._grid_map.get_grid_state(current_grid.id()) == GridState.VISITED:
+
+            if self._grid.get_cell(current_grid.r, current_grid.c).state == GridState.VISITED:
                 continue
-            # update the grid
-            self._grid_map.set_grid_state(current_grid, GridState.VISITED)
-            self._grid_queue.put(current_grid)
-            # TODO: update the grid in the map
-            neighbors = self.get_neighbors(current_grid)
-            for nei in neighbors:
-                # nei might be already in the q, fastest way to update the g()?
-                if self._grid_map.get_grid_state(nei) != GridState.VISITED: # check if the grid is already visited in the map
-                    neighbor = self._grid_map.get_grid(nei[0], nei[1])
-                    neighbor.relax(current_grid)
-                    neighbor.set_state(GridState.SEEN)
-                    self._priority_queue.put(neighbor)
-                    self._grid_queue.put(neighbor)
-            sleep(0.05)
-            self.progress.emit()
+
+            # update current grid
+            self._grid.udpate_cell_state(current_grid.r, current_grid.c, GridState.VISITED)
+            self._update_queue.put(current_grid)
+
+            for nei in self._grid.get_cell_neighbors(current_grid):
+                if nei.state == GridState.VISITED:
+                    continue
+
+                nei.relax(current_grid)
+                nei.state = GridState.SEEN
+                heapq.heappush(self._priority_queue, (nei.g + math.sqrt(math.pow(nei.r - self._plan_meta.dest.r, 2) + math.pow(nei.c - self._plan_meta.dest.c, 2)), nei))
+                self._update_queue.put(nei)
+            
+            # TODO: only sleep when visulization
+            time.sleep(0.05)
 
         # Done, get the path if reach dst
-        status = PlanStatus(self._map_info.is_dest(current_grid))
-        while status.success and current_grid != src:
-            current_grid.set_state(GridState.PATH)
+        status = PlanStatus(current_grid.pose == self._plan_meta.dest.pose)
+        while status.success and current_grid.pose != src.pose:
             status.add_node(current_grid)
-            current_grid = current_grid.pred()
-        self.finished.emit()
-        return status
+            current_grid = current_grid.pred
 
-        
-        
+        self._update_queue.put(status)
+
+        return status.success
+

@@ -11,20 +11,6 @@ class PlannerType(Enum):
     D_STAR_LITE = 4
     RRT = 5
 
-class PlanStatus:
-    def __init__(self, succeed) -> None:
-        self._path = []
-        self._plan_succeed = succeed
-    
-    def success(self):
-        return self._plan_succeed
-    
-    def add_node(self, node):
-        self._path.insert(0, node)
-    
-    def path(self):
-        return self._path
-
 class PlannerInterface(QObject):
     finished = pyqtSignal()
     progress = pyqtSignal()
