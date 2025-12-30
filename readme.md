@@ -33,6 +33,8 @@ graph TD
     J --> B2
     J --> B3
     K[Hypothesis Testing] --> J
+    L[Pose Error Representation] --> H
+    L1[Rotation Representation] --> L
 
 ```
 
